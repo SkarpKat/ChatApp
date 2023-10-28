@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+option go_package = "github.com/SkarpKat/ChatApp";
+
+package Chat;  
+
+service ChatService {
+    rpc Connect (ConnectRequest) returns (stream ConnectResponse) {}
+    rpc Disconnect (DisconnectRequest) returns (DisconnectResponse) {}
+    rpc ChatRoute (stream SendRequest) returns (stream SendResponse) {}
+}
+
+message ConnectRequest {
+    string username = 1;
+}
+
+message ConnectResponse {
+    string message = 1;
+}
+
+message DisconnectRequest {
+    string username = 1;
+}
+
+message DisconnectResponse {
+    string message = 1;
+}
+
+message SendRequest {
+    string username = 1;
+    string message = 2;
+}
+
+message SendResponse {
+    string message = 1;
+}
