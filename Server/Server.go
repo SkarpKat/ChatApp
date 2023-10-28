@@ -1,7 +1,6 @@
 package main
 
 import (
-	"context"
 	"flag"
 	"fmt"
 	"log"
@@ -63,13 +62,31 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 
 func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService_ConnectServer) error {
 	log.Printf("User: %s connected", in.GetUsername())
-	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername()})
+
+	connectMsg := in.GetUsername() + " has connected"
+	s.BroadcastMsg(connectMsg)
+	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername() + "!"})
 	return nil
 }
 
-func (s *ChatServiceServer) Disconnect(ctx context.Context, in *pb.DisconnectRequest) (*pb.DisconnectResponse, error) {
+func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatService_DisconnectServer) error {
 	log.Printf("User: %s disconnected", in.GetUsername())
-	return &pb.DisconnectResponse{}, nil
+
+	disconnectMsg := in.GetUsername() + " has disconnected"
+	s.BroadcastMsg(disconnectMsg)
+	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!"})
+	return nil
+}
+
+func (s *ChatServiceServer) BroadcastMsg(message string) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	// Send the message to all connected clients
+	for _, clientStream := range s.clientStreams {
+		if err := clientStream.Send(&pb.SendResponse{Message: message}); err != nil {
+			log.Printf("Error sending message: %v", err)
+		}
+	}
 }
 
 func main() {

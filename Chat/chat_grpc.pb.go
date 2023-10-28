@@ -23,7 +23,7 @@ const _ = grpc.SupportPackageIsVersion7
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type ChatServiceClient interface {
 	Connect(ctx context.Context, in *ConnectRequest, opts ...grpc.CallOption) (ChatService_ConnectClient, error)
-	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*DisconnectResponse, error)
+	Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (ChatService_DisconnectClient, error)
 	ChatRoute(ctx context.Context, opts ...grpc.CallOption) (ChatService_ChatRouteClient, error)
 }
 
@@ -67,17 +67,40 @@ func (x *chatServiceConnectClient) Recv() (*ConnectResponse, error) {
 	return m, nil
 }
 
-func (c *chatServiceClient) Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (*DisconnectResponse, error) {
-	out := new(DisconnectResponse)
-	err := c.cc.Invoke(ctx, "/Chat.ChatService/Disconnect", in, out, opts...)
+func (c *chatServiceClient) Disconnect(ctx context.Context, in *DisconnectRequest, opts ...grpc.CallOption) (ChatService_DisconnectClient, error) {
+	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[1], "/Chat.ChatService/Disconnect", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &chatServiceDisconnectClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type ChatService_DisconnectClient interface {
+	Recv() (*DisconnectResponse, error)
+	grpc.ClientStream
+}
+
+type chatServiceDisconnectClient struct {
+	grpc.ClientStream
+}
+
+func (x *chatServiceDisconnectClient) Recv() (*DisconnectResponse, error) {
+	m := new(DisconnectResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 func (c *chatServiceClient) ChatRoute(ctx context.Context, opts ...grpc.CallOption) (ChatService_ChatRouteClient, error) {
-	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[1], "/Chat.ChatService/ChatRoute", opts...)
+	stream, err := c.cc.NewStream(ctx, &ChatService_ServiceDesc.Streams[2], "/Chat.ChatService/ChatRoute", opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -112,7 +135,7 @@ func (x *chatServiceChatRouteClient) Recv() (*SendResponse, error) {
 // for forward compatibility
 type ChatServiceServer interface {
 	Connect(*ConnectRequest, ChatService_ConnectServer) error
-	Disconnect(context.Context, *DisconnectRequest) (*DisconnectResponse, error)
+	Disconnect(*DisconnectRequest, ChatService_DisconnectServer) error
 	ChatRoute(ChatService_ChatRouteServer) error
 	mustEmbedUnimplementedChatServiceServer()
 }
@@ -124,8 +147,8 @@ type UnimplementedChatServiceServer struct {
 func (UnimplementedChatServiceServer) Connect(*ConnectRequest, ChatService_ConnectServer) error {
 	return status.Errorf(codes.Unimplemented, "method Connect not implemented")
 }
-func (UnimplementedChatServiceServer) Disconnect(context.Context, *DisconnectRequest) (*DisconnectResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method Disconnect not implemented")
+func (UnimplementedChatServiceServer) Disconnect(*DisconnectRequest, ChatService_DisconnectServer) error {
+	return status.Errorf(codes.Unimplemented, "method Disconnect not implemented")
 }
 func (UnimplementedChatServiceServer) ChatRoute(ChatService_ChatRouteServer) error {
 	return status.Errorf(codes.Unimplemented, "method ChatRoute not implemented")
@@ -164,22 +187,25 @@ func (x *chatServiceConnectServer) Send(m *ConnectResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _ChatService_Disconnect_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(DisconnectRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _ChatService_Disconnect_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(DisconnectRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(ChatServiceServer).Disconnect(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/Chat.ChatService/Disconnect",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(ChatServiceServer).Disconnect(ctx, req.(*DisconnectRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(ChatServiceServer).Disconnect(m, &chatServiceDisconnectServer{stream})
+}
+
+type ChatService_DisconnectServer interface {
+	Send(*DisconnectResponse) error
+	grpc.ServerStream
+}
+
+type chatServiceDisconnectServer struct {
+	grpc.ServerStream
+}
+
+func (x *chatServiceDisconnectServer) Send(m *DisconnectResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 func _ChatService_ChatRoute_Handler(srv interface{}, stream grpc.ServerStream) error {
@@ -214,16 +240,16 @@ func (x *chatServiceChatRouteServer) Recv() (*SendRequest, error) {
 var ChatService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "Chat.ChatService",
 	HandlerType: (*ChatServiceServer)(nil),
-	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "Disconnect",
-			Handler:    _ChatService_Disconnect_Handler,
-		},
-	},
+	Methods:     []grpc.MethodDesc{},
 	Streams: []grpc.StreamDesc{
 		{
 			StreamName:    "Connect",
 			Handler:       _ChatService_Connect_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "Disconnect",
+			Handler:       _ChatService_Disconnect_Handler,
 			ServerStreams: true,
 		},
 		{

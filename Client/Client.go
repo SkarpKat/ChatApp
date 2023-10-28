@@ -29,20 +29,22 @@ func main() {
 	defer conn.Close()
 	client := pb.NewChatServiceClient(conn)
 
-	stream, err := client.ChatRoute(ctx)
-	if err != nil {
-		log.Fatalf("Failed to create stream: %v", err)
-	}
 	connectRequest := &pb.ConnectRequest{Username: username}
 	clicon, err := client.Connect(ctx, connectRequest)
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
-	in, err := clicon.Recv()
+	resp, err := clicon.Recv()
 	if err != nil {
-		log.Fatalf("Failed to receive a ConnectRequest msg : %v", err)
+		log.Fatalf("Failed to receive message: %v", err)
 	}
-	fmt.Println(in.GetMessage())
+	fmt.Println(resp.GetMessage())
+	clicon.CloseSend()
+
+	stream, err := client.ChatRoute(ctx)
+	if err != nil {
+		log.Fatalf("Failed to create stream: %v", err)
+	}
 
 	go func() {
 		for {
@@ -65,12 +67,15 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to disconnect: %v", err)
 			}
-			fmt.Println(disCon.GetMessage())
+			resp, err := disCon.Recv()
+			if err != nil {
+				log.Fatalf("Failed to receive message: %v", err)
+			}
+			fmt.Println(resp.GetMessage())
+			disCon.CloseSend()
+			stream.CloseSend()
 			break
 		}
-		if message != "" {
-			stream.Send(&pb.SendRequest{Username: username, Message: message})
-		}
+		stream.Send(&pb.SendRequest{Username: username, Message: message})
 	}
-	stream.CloseSend()
 }
