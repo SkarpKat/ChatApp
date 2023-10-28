@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sync"
 
 	pb "github.com/SkarpKat/ChatApp/Chat"
 	"google.golang.org/grpc"
@@ -17,21 +18,45 @@ var (
 
 type ChatServiceServer struct {
 	pb.UnimplementedChatServiceServer
+
+	// Mutex to synchronize access to the clientStreams slice
+	mu            sync.Mutex
+	clientStreams []pb.ChatService_ChatRouteServer
 }
 
 func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) error {
+	s.mu.Lock()
+	s.clientStreams = append(s.clientStreams, stream)
+	s.mu.Unlock()
+
 	for {
 		in, err := stream.Recv()
 		if err != nil {
+			s.mu.Lock()
+			// Remove the stream from the clientStreams slice upon client disconnect
+			for i, clientStream := range s.clientStreams {
+				if clientStream == stream {
+					copy(s.clientStreams[i:], s.clientStreams[i+1:])
+					s.clientStreams = s.clientStreams[:len(s.clientStreams)-1]
+					break
+				}
+			}
+			s.mu.Unlock()
 			return err
 		}
 
 		log.Printf("User: %s said: %s", in.GetUsername(), in.GetMessage())
 
-		BrodcastMsg := in.GetUsername() + ": " + in.GetMessage()
+		BroadcastMsg := in.GetUsername() + ": " + in.GetMessage()
 		if in.Message != "" {
-			// Send to all clients
-			stream.Send(&pb.SendResponse{Message: BrodcastMsg})
+			s.mu.Lock()
+			// Send the message to all connected clients
+			for _, clientStream := range s.clientStreams {
+				if err := clientStream.Send(&pb.SendResponse{Message: BroadcastMsg}); err != nil {
+					log.Printf("Error sending message: %v", err)
+				}
+			}
+			s.mu.Unlock()
 		}
 	}
 }
@@ -57,8 +82,13 @@ func main() {
 
 	grpcServer := grpc.NewServer()
 
-	pb.RegisterChatServiceServer(grpcServer, &ChatServiceServer{})
+	chatServer := &ChatServiceServer{
+		clientStreams: make([]pb.ChatService_ChatRouteServer, 0),
+	}
+
+	pb.RegisterChatServiceServer(grpcServer, chatServer)
 	log.Printf("Server listening at %v", lis.Addr())
+
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %s", err)
 	}
