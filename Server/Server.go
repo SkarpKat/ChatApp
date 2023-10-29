@@ -12,7 +12,8 @@ import (
 )
 
 var (
-	port = flag.Int("port", 10000, "The server port")
+	port            = flag.Int("port", 10000, "The server port")
+	serverTimestamp = int64(0)
 )
 
 type ChatServiceServer struct {
@@ -86,6 +87,12 @@ func (s *ChatServiceServer) BroadcastMsg(message string) {
 		if err := clientStream.Send(&pb.SendResponse{Message: message}); err != nil {
 			log.Printf("Error sending message: %v", err)
 		}
+	}
+}
+
+func maxLamportTimestamp(timestamp int64) {
+	if timestamp > serverTimestamp {
+		serverTimestamp = timestamp
 	}
 }
 

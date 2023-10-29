@@ -13,9 +13,16 @@ import (
 )
 
 var (
-	serverAddress = flag.String("server_address", "localhost:10000", "The server address in the format of host:port")
-	userName      = flag.String("username", "SkarpKat", "The username")
+	serverAddress   = flag.String("server_address", "localhost:10000", "The server address in the format of host:port")
+	userName        = flag.String("username", "SkarpKat", "The username")
+	clientTimestamp = int64(0)
 )
+
+func maxLamportTimestamp(timestamp int64) {
+	if timestamp > clientTimestamp {
+		clientTimestamp = timestamp
+	}
+}
 
 func main() {
 	ctx, cancel := context.WithCancel(context.Background())

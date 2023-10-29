@@ -6,31 +6,37 @@ package Chat;
 
 service ChatService {
     rpc Connect (ConnectRequest) returns (stream ConnectResponse) {}
-    rpc Disconnect (DisconnectRequest) returns (DisconnectResponse) {}
+    rpc Disconnect (DisconnectRequest) returns (stream DisconnectResponse) {}
     rpc ChatRoute (stream SendRequest) returns (stream SendResponse) {}
 }
 
 message ConnectRequest {
     string username = 1;
+    int64 timestamp = 2;
 }
 
 message ConnectResponse {
     string message = 1;
+    int64 timestamp = 2;
 }
 
 message DisconnectRequest {
     string username = 1;
+    int64 timestamp = 2;
 }
 
 message DisconnectResponse {
     string message = 1;
+    int64 timestamp = 2;
 }
 
 message SendRequest {
     string username = 1;
     string message = 2;
+    int64 timestamp = 3;
 }
 
 message SendResponse {
     string message = 1;
+    int64 timestamp = 2;
 }
