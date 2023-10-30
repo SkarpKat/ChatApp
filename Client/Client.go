@@ -46,17 +46,19 @@ func main() {
 	defer conn.Close()
 	client := pb.NewChatServiceClient(conn)
 
-	connectRequest := &pb.ConnectRequest{Username: username}
+	clientTimestamp++
+	connectRequest := &pb.ConnectRequest{Username: username, Timestamp: clientTimestamp}
 	clicon, err := client.Connect(ctx, connectRequest)
 	if err != nil {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 	resp, err := clicon.Recv()
+	maxLamportTimestamp(resp.GetTimestamp())
+
 	if err != nil {
 		log.Fatalf("Failed to receive message: %v", err)
 	}
-	// fmt.Println(resp.GetMessage())
-	log.Printf("%s", resp.GetMessage())
+	log.Printf("%s at time: %d", resp.GetMessage(), resp.GetTimestamp())
 	clicon.CloseSend()
 
 	stream, err := client.ChatRoute(ctx)
@@ -67,13 +69,15 @@ func main() {
 	go func() {
 		for {
 			in, err := stream.Recv()
+			maxLamportTimestamp(in.GetTimestamp())
 			if err != nil {
 				log.Fatalf("Failed to receive a note : %v", err)
 			}
-			log.Printf("%s", in.GetMessage())
+			log.Printf("%s at time: %d", in.GetMessage(), in.GetTimestamp())
 			// fmt.Println(in.GetMessage())
 		}
 	}()
+
 	scanner := bufio.NewScanner(os.Stdin)
 	for {
 		var message string
@@ -101,6 +105,7 @@ func main() {
 			stream.CloseSend()
 			break
 		}
-		stream.Send(&pb.SendRequest{Username: username, Message: message})
+		clientTimestamp++
+		stream.Send(&pb.SendRequest{Username: username, Message: message, Timestamp: clientTimestamp})
 	}
 }

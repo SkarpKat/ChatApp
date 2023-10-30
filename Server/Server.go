@@ -35,6 +35,7 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 
 	for {
 		in, err := stream.Recv()
+		maxLamportTimestamp(in.GetTimestamp())
 		if err != nil {
 			s.mu.Lock()
 			// Remove the stream from the clientStreams slice upon client disconnect
@@ -49,34 +50,30 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 			return err
 		}
 
-		log.Printf("User: %s said: %s", in.GetUsername(), in.GetMessage())
+		log.Printf("User: %s said: %s at time: %d", in.GetUsername(), in.GetMessage(), in.GetTimestamp())
 
-		BroadcastMsg := in.GetUsername() + ": " + in.GetMessage()
+		BroadcastString := in.GetUsername() + ": " + in.GetMessage()
 		if in.Message != "" {
-			s.mu.Lock()
-			// Send the message to all connected clients
-			for _, clientStream := range s.clientStreams {
-				if err := clientStream.Send(&pb.SendResponse{Message: BroadcastMsg}); err != nil {
-					log.Printf("Error sending message: %v", err)
-				}
-			}
-			s.mu.Unlock()
+			s.BroadcastMsg(BroadcastString)
 		}
 	}
 }
 
 func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService_ConnectServer) error {
-	log.Printf("User: %s connected", in.GetUsername())
+	maxLamportTimestamp(in.GetTimestamp())
+	log.Printf("User: %s connected at time: %d", in.GetUsername(), serverTimestamp)
 	clientsName = append(clientsName, in.GetUsername())
 
 	connectMsg := in.GetUsername() + " has connected"
 	s.BroadcastMsg(connectMsg)
-	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername() + "!"})
+	serverTimestamp++
+	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
 
 func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatService_DisconnectServer) error {
-	log.Printf("User: %s disconnected", in.GetUsername())
+	maxLamportTimestamp(in.GetTimestamp())
+	log.Printf("User: %s disconnected at time: %d", in.GetUsername(), in.GetTimestamp())
 	//remove user from clientsName
 	for i, clientName := range clientsName {
 		if clientName == in.GetUsername() {
@@ -88,7 +85,8 @@ func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatS
 
 	disconnectMsg := in.GetUsername() + " has disconnected"
 	s.BroadcastMsg(disconnectMsg)
-	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!"})
+	serverTimestamp++
+	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
 
@@ -97,7 +95,8 @@ func (s *ChatServiceServer) BroadcastMsg(message string) {
 	defer s.mu.Unlock()
 	// Send the message to all connected clients
 	for _, clientStream := range s.clientStreams {
-		if err := clientStream.Send(&pb.SendResponse{Message: message}); err != nil {
+		serverTimestamp++
+		if err := clientStream.Send(&pb.SendResponse{Message: message, Timestamp: serverTimestamp}); err != nil {
 			log.Printf("Error sending message: %v", err)
 		}
 	}
