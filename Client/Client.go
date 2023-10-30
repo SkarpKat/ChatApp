@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 
@@ -45,7 +44,8 @@ func main() {
 	if err != nil {
 		log.Fatalf("Failed to receive message: %v", err)
 	}
-	fmt.Println(resp.GetMessage())
+	// fmt.Println(resp.GetMessage())
+	log.Printf("%s", resp.GetMessage())
 	clicon.CloseSend()
 
 	stream, err := client.ChatRoute(ctx)
@@ -59,7 +59,8 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to receive a note : %v", err)
 			}
-			fmt.Println(in.GetMessage())
+			log.Printf("%s", in.GetMessage())
+			// fmt.Println(in.GetMessage())
 		}
 	}()
 	scanner := bufio.NewScanner(os.Stdin)
@@ -67,7 +68,12 @@ func main() {
 		var message string
 		for scanner.Scan() {
 			message = scanner.Text()
-			break
+			//check if message is below or equal to 128 characters
+			if len(message) <= 128 {
+				break
+			} else {
+				log.Printf("Message is too long, please keep it under 128 characters")
+			}
 		}
 		if message == "/quit" {
 			disCon, err := client.Disconnect(ctx, &pb.DisconnectRequest{Username: username})
@@ -78,7 +84,8 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to receive message: %v", err)
 			}
-			fmt.Println(resp.GetMessage())
+			log.Printf("%s", resp.GetMessage())
+			// fmt.Println(resp.GetMessage())
 			disCon.CloseSend()
 			stream.CloseSend()
 			break
