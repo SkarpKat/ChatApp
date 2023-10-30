@@ -1,10 +1,13 @@
 package main
 
 import (
+	"bufio"
 	"flag"
 	"fmt"
+	"io"
 	"log"
 	"net"
+	"os"
 	"sync"
 
 	pb "github.com/SkarpKat/ChatApp/Chat"
@@ -14,6 +17,7 @@ import (
 var (
 	port            = flag.Int("port", 10000, "The server port")
 	serverTimestamp = int64(0)
+	clientsName     = make([]string, 0)
 )
 
 type ChatServiceServer struct {
@@ -63,6 +67,7 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 
 func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService_ConnectServer) error {
 	log.Printf("User: %s connected", in.GetUsername())
+	clientsName = append(clientsName, in.GetUsername())
 
 	connectMsg := in.GetUsername() + " has connected"
 	s.BroadcastMsg(connectMsg)
@@ -72,6 +77,14 @@ func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService
 
 func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatService_DisconnectServer) error {
 	log.Printf("User: %s disconnected", in.GetUsername())
+	//remove user from clientsName
+	for i, clientName := range clientsName {
+		if clientName == in.GetUsername() {
+			copy(clientsName[i:], clientsName[i+1:])
+			clientsName = clientsName[:len(clientsName)-1]
+			break
+		}
+	}
 
 	disconnectMsg := in.GetUsername() + " has disconnected"
 	s.BroadcastMsg(disconnectMsg)
@@ -98,8 +111,15 @@ func maxLamportTimestamp(timestamp int64) {
 
 func main() {
 	flag.Parse()
-	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 
+	file, err := os.OpenFile("Server/Server.log", os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Error opening file: %v", err)
+	}
+	defer file.Close()
+	log.SetOutput(io.MultiWriter(file, os.Stdout))
+
+	lis, err := net.Listen("tcp", fmt.Sprintf(":%d", *port))
 	if err != nil {
 		log.Fatalf("Failed to listen: %v", err)
 	}
@@ -113,7 +133,36 @@ func main() {
 	pb.RegisterChatServiceServer(grpcServer, chatServer)
 	log.Printf("Server listening at %v", lis.Addr())
 
+	go func() {
+		scanner := bufio.NewScanner(os.Stdin)
+		for {
+			for scanner.Scan() {
+				message := scanner.Text()
+				switch message {
+				case "/kill":
+					log.Printf("Server shutting down ...")
+					os.Exit(0)
+				case "/timestamp":
+					log.Printf("Current timestamp: %d", serverTimestamp)
+				case "/clients":
+					for _, clientName := range clientsName {
+						log.Printf("Client: %s\n", clientName)
+					}
+				case "/help":
+					log.Printf("Commands:\n/kill - kills the server\n/timestamp - prints the current timestamp\n/clients - prints the current clients connected to the server\n/help - prints the commands")
+				default:
+					log.Printf("Invalid command")
+				}
+
+			}
+
+		}
+	}()
+
 	if err := grpcServer.Serve(lis); err != nil {
 		log.Fatalf("Failed to serve: %s", err)
 	}
+
+	//Input for commands to server
+
 }

@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"context"
 	"flag"
+	"io"
 	"log"
 	"os"
 
@@ -27,6 +28,16 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 	flag.Parse()
+
+	logPath := "Client/" + *userName + "Client.log"
+
+	file, err := os.OpenFile(logPath, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0644)
+	if err != nil {
+		log.Fatalf("Error opening file: %v", err)
+	}
+	defer file.Close()
+	log.SetOutput(io.MultiWriter(file, os.Stdout))
+
 	username := *userName
 	conn, err := grpc.DialContext(ctx, *serverAddress, grpc.WithBlock(), grpc.WithInsecure())
 	if err != nil {
