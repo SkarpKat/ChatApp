@@ -18,9 +18,11 @@ var (
 	clientTimestamp = int64(0)
 )
 
-func maxLamportTimestamp(timestamp int64) {
+func updateLamportTimestamp(timestamp int64) {
 	if timestamp > clientTimestamp {
-		clientTimestamp = timestamp
+		clientTimestamp = timestamp + 1
+	} else {
+		clientTimestamp++
 	}
 }
 
@@ -53,12 +55,12 @@ func main() {
 		log.Fatalf("Failed to connect: %v", err)
 	}
 	resp, err := clicon.Recv()
-	maxLamportTimestamp(resp.GetTimestamp())
+	updateLamportTimestamp(resp.GetTimestamp())
 
 	if err != nil {
 		log.Fatalf("Failed to receive message: %v", err)
 	}
-	log.Printf("%s at time: %d", resp.GetMessage(), resp.GetTimestamp())
+	log.Printf("%s at time: %d", resp.GetMessage(), clientTimestamp)
 	clicon.CloseSend()
 
 	stream, err := client.ChatRoute(ctx)
@@ -69,11 +71,11 @@ func main() {
 	go func() {
 		for {
 			in, err := stream.Recv()
-			maxLamportTimestamp(in.GetTimestamp())
+			updateLamportTimestamp(in.GetTimestamp())
 			if err != nil {
 				log.Fatalf("Failed to receive a note : %v", err)
 			}
-			log.Printf("%s at time: %d", in.GetMessage(), in.GetTimestamp())
+			log.Printf("%s at time: %d", in.GetMessage(), clientTimestamp)
 			// fmt.Println(in.GetMessage())
 		}
 	}()
@@ -91,7 +93,8 @@ func main() {
 			}
 		}
 		if message == "/quit" {
-			disCon, err := client.Disconnect(ctx, &pb.DisconnectRequest{Username: username})
+			clientTimestamp++;
+			disCon, err := client.Disconnect(ctx, &pb.DisconnectRequest{Username: username, Timestamp: clientTimestamp})
 			if err != nil {
 				log.Fatalf("Failed to disconnect: %v", err)
 			}
@@ -99,7 +102,8 @@ func main() {
 			if err != nil {
 				log.Fatalf("Failed to receive message: %v", err)
 			}
-			log.Printf("%s", resp.GetMessage())
+			updateLamportTimestamp(resp.GetTimestamp())
+			log.Printf("%s at time %d", resp.GetMessage(), clientTimestamp)
 			// fmt.Println(resp.GetMessage())
 			disCon.CloseSend()
 			stream.CloseSend()

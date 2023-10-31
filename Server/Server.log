@@ -1,0 +1,9 @@
+2023/10/31 15:30:39 Server listening at [::]:10000
+2023/10/31 15:30:45 User: ClientA connected at time: 2
+2023/10/31 15:30:48 User: ClientB connected at time: 4
+2023/10/31 15:30:50 User: ClientC connected at time: 7
+2023/10/31 15:30:54 User: ClientA said: lo at time: 10
+2023/10/31 15:30:56 User: ClientC disconnected at time: 17
+2023/10/31 15:30:59 User: ClientB disconnected at time: 22
+2023/10/31 15:31:02 User: ClientA disconnected at time: 26
+2023/10/31 15:31:05 Server shutting down ...

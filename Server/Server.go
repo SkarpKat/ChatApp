@@ -35,7 +35,7 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 
 	for {
 		in, err := stream.Recv()
-		maxLamportTimestamp(in.GetTimestamp())
+		updateLamportTimestamp(in.GetTimestamp())
 		if err != nil {
 			s.mu.Lock()
 			// Remove the stream from the clientStreams slice upon client disconnect
@@ -60,7 +60,7 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 }
 
 func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService_ConnectServer) error {
-	maxLamportTimestamp(in.GetTimestamp())
+	updateLamportTimestamp(in.GetTimestamp())
 	log.Printf("User: %s connected at time: %d", in.GetUsername(), serverTimestamp)
 	clientsName = append(clientsName, in.GetUsername())
 
@@ -72,8 +72,8 @@ func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService
 }
 
 func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatService_DisconnectServer) error {
-	maxLamportTimestamp(in.GetTimestamp())
-	log.Printf("User: %s disconnected at time: %d", in.GetUsername(), in.GetTimestamp())
+	updateLamportTimestamp(in.GetTimestamp())
+	log.Printf("User: %s disconnected at time: %d", in.GetUsername(), serverTimestamp)
 	//remove user from clientsName
 	for i, clientName := range clientsName {
 		if clientName == in.GetUsername() {
@@ -85,7 +85,6 @@ func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatS
 
 	disconnectMsg := in.GetUsername() + " has disconnected"
 	s.BroadcastMsg(disconnectMsg)
-	serverTimestamp++
 	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
@@ -102,9 +101,11 @@ func (s *ChatServiceServer) BroadcastMsg(message string) {
 	}
 }
 
-func maxLamportTimestamp(timestamp int64) {
+func updateLamportTimestamp(timestamp int64) {
 	if timestamp > serverTimestamp {
-		serverTimestamp = timestamp
+		serverTimestamp = timestamp + 1
+	} else {
+		serverTimestamp++
 	}
 }
 
