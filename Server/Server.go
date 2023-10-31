@@ -67,6 +67,7 @@ func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService
 	connectMsg := in.GetUsername() + " has connected"
 	s.BroadcastMsg(connectMsg)
 	serverTimestamp++
+	log.Printf("Sending welcome message to client %s at time:", in.GetUsername())
 	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
@@ -85,6 +86,7 @@ func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatS
 
 	disconnectMsg := in.GetUsername() + " has disconnected"
 	s.BroadcastMsg(disconnectMsg)
+	log.Printf("Sending goodbye message to client %s at time: %d", in.GetUsername(), serverTimestamp)
 	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
@@ -93,8 +95,9 @@ func (s *ChatServiceServer) BroadcastMsg(message string) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	// Send the message to all connected clients
-	for _, clientStream := range s.clientStreams {
+	for i, clientStream := range s.clientStreams {
 		serverTimestamp++
+		log.Printf("Sending message to client %s at time %d", clientsName[i], serverTimestamp)
 		if err := clientStream.Send(&pb.SendResponse{Message: message, Timestamp: serverTimestamp}); err != nil {
 			log.Printf("Error sending message: %v", err)
 		}

@@ -49,6 +49,7 @@ func main() {
 	client := pb.NewChatServiceClient(conn)
 
 	clientTimestamp++
+	log.Printf("Connecting to server at time: %d", clientTimestamp)
 	connectRequest := &pb.ConnectRequest{Username: username, Timestamp: clientTimestamp}
 	clicon, err := client.Connect(ctx, connectRequest)
 	if err != nil {
@@ -93,7 +94,8 @@ func main() {
 			}
 		}
 		if message == "/quit" {
-			clientTimestamp++;
+			clientTimestamp++
+			log.Printf("Disconnecting from server at time: %d", clientTimestamp)
 			disCon, err := client.Disconnect(ctx, &pb.DisconnectRequest{Username: username, Timestamp: clientTimestamp})
 			if err != nil {
 				log.Fatalf("Failed to disconnect: %v", err)
@@ -110,6 +112,7 @@ func main() {
 			break
 		}
 		clientTimestamp++
+		log.Printf("Sending message: %s at time: %d", message, clientTimestamp)
 		stream.Send(&pb.SendRequest{Username: username, Message: message, Timestamp: clientTimestamp})
 	}
 }

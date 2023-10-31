@@ -7,3 +7,19 @@
 2023/10/31 15:30:59 User: ClientB disconnected at time: 22
 2023/10/31 15:31:02 User: ClientA disconnected at time: 26
 2023/10/31 15:31:05 Server shutting down ...
+2023/10/31 15:39:38 Server listening at [::]:10000
+2023/10/31 15:39:51 User: SkarpKat connected at time: 2
+2023/10/31 15:39:51 Sending welcome message to client SkarpKat
+2023/10/31 15:40:11 User: hej connected at time: 4
+2023/10/31 15:40:11 Sending message to client SkarpKat
+2023/10/31 15:40:11 Sending welcome message to client hej
+2023/10/31 15:40:27 User: hej2 connected at time: 7
+2023/10/31 15:40:27 Sending message to client SkarpKat
+2023/10/31 15:40:27 Sending message to client hej
+2023/10/31 15:40:27 Sending welcome message to client hej2
+2023/10/31 15:40:55 User: SkarpKat said: hej at time: 10
+2023/10/31 15:40:55 Sending message to client SkarpKat
+2023/10/31 15:40:55 Sending message to client hej
+2023/10/31 15:40:55 Sending message to client hej2
+2023/10/31 15:43:19 User: SkarpKat said:  at time: 14
+2023/10/31 15:43:22 User: hej2 said:  at time: 16
