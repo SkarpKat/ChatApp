@@ -1,8 +1,11 @@
-2023/10/31 15:30:45 Welcome to the chat ClientA! at time: 4
-2023/10/31 15:30:48 ClientB has connected at time: 6
-2023/10/31 15:30:50 ClientC has connected at time: 9
-2023/10/31 15:30:54 ClientA: lo at time: 13
-2023/10/31 15:30:56 ClientC has disconnected at time: 19
-2023/10/31 15:30:59 ClientB has disconnected at time: 24
-2023/10/31 15:31:02 Goodbye ClientA! at time 28
-2023/10/31 15:31:02 ClientA has disconnected at time: 29
+2023/10/31 16:27:29 Connecting to server at time: 1
+2023/10/31 16:27:29 Welcome to the chat ClientA! at time: 4
+2023/10/31 16:27:31 ClientB has connected at time: 6
+2023/10/31 16:27:34 ClientC has connected at time: 9
+2023/10/31 16:27:37 Sending message: lo at time: 10
+2023/10/31 16:27:37 ClientA: lo at time: 13
+2023/10/31 16:27:42 ClientC has disconnected at time: 19
+2023/10/31 16:27:45 ClientB has disconnected at time: 25
+2023/10/31 16:27:47 Disconnecting from server at time: 26
+2023/10/31 16:27:47 ClientA has disconnected at time: 30
+2023/10/31 16:27:47 Goodbye ClientA! at time 31

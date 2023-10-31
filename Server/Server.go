@@ -50,7 +50,7 @@ func (s *ChatServiceServer) ChatRoute(stream pb.ChatService_ChatRouteServer) err
 			return err
 		}
 
-		log.Printf("User: %s said: %s at time: %d", in.GetUsername(), in.GetMessage(), in.GetTimestamp())
+		log.Printf("User: %s said: %s at time: %d", in.GetUsername(), in.GetMessage(), serverTimestamp)
 
 		BroadcastString := in.GetUsername() + ": " + in.GetMessage()
 		if in.Message != "" {
@@ -67,7 +67,7 @@ func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService
 	connectMsg := in.GetUsername() + " has connected"
 	s.BroadcastMsg(connectMsg)
 	serverTimestamp++
-	log.Printf("Sending welcome message to client %s at time:", in.GetUsername())
+	log.Printf("Sending welcome message to client %s at time: %d", in.GetUsername(), serverTimestamp)
 	stream.Send(&pb.ConnectResponse{Message: "Welcome to the chat " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
 }
@@ -75,17 +75,20 @@ func (s *ChatServiceServer) Connect(in *pb.ConnectRequest, stream pb.ChatService
 func (s *ChatServiceServer) Disconnect(in *pb.DisconnectRequest, stream pb.ChatService_DisconnectServer) error {
 	updateLamportTimestamp(in.GetTimestamp())
 	log.Printf("User: %s disconnected at time: %d", in.GetUsername(), serverTimestamp)
+
+	disconnectMsg := in.GetUsername() + " has disconnected"
+	s.BroadcastMsg(disconnectMsg)
 	//remove user from clientsName
 	for i, clientName := range clientsName {
 		if clientName == in.GetUsername() {
 			copy(clientsName[i:], clientsName[i+1:])
 			clientsName = clientsName[:len(clientsName)-1]
+			copy(s.clientStreams[i:], s.clientStreams[i+1:])
+			s.clientStreams = s.clientStreams[:len(s.clientStreams)-1]
 			break
 		}
 	}
-
-	disconnectMsg := in.GetUsername() + " has disconnected"
-	s.BroadcastMsg(disconnectMsg)
+	serverTimestamp++
 	log.Printf("Sending goodbye message to client %s at time: %d", in.GetUsername(), serverTimestamp)
 	stream.Send(&pb.DisconnectResponse{Message: "Goodbye " + in.GetUsername() + "!", Timestamp: serverTimestamp})
 	return nil
